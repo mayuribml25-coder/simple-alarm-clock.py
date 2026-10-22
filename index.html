@@ -1,0 +1,276 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Alarm Clock</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #141e30, #243b55);
+            color: white;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 430px;
+            padding: 30px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-size: 25px;
+            margin-bottom: 25px;
+        }
+
+        #clock {
+            font-size: 40px;
+            font-weight: bold;
+            margin: 20px 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 12px 18px;
+            margin: 5px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+            color: white;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .set-btn {
+            background: #16a34a;
+        }
+
+        .snooze-btn {
+            background: #f59e0b;
+        }
+
+        .stop-btn {
+            background: #dc2626;
+        }
+
+        #status {
+            margin-top: 20px;
+            min-height: 24px;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+        }
+
+        .ringing {
+            color: #fca5a5;
+            animation: pulse 0.8s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.05); }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>⏰ Advanced Alarm Clock</h1>
+
+        <div id="clock">00:00:00</div>
+
+        <label for="alarmTime">Set Alarm Time</label>
+        <input type="time" id="alarmTime" step="1" required>
+
+        <button class="set-btn" id="setBtn" onclick="setAlarm()">
+            Set Alarm
+        </button>
+
+        <div id="status">Please set your alarm.</div>
+
+        <div id="alarmControls" hidden>
+            <button class="snooze-btn" onclick="snoozeAlarm()">
+                Snooze 5 Min
+            </button>
+            <button class="stop-btn" onclick="stopAlarm()">
+                Stop Alarm
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let alarmTime = null;
+        let alarmTimeout = null;
+        let ringing = false;
+        let audioContext = null;
+        let beepTimer = null;
+
+        const clock = document.getElementById("clock");
+        const status = document.getElementById("status");
+        const alarmInput = document.getElementById("alarmTime");
+        const controls = document.getElementById("alarmControls");
+        const setBtn = document.getElementById("setBtn");
+
+        function formatTime(date) {
+            return date.toLocaleTimeString("en-GB", {
+                hour12: false
+            });
+        }
+
+        function updateClock() {
+            const now = new Date();
+            clock.textContent = formatTime(now);
+
+            if (alarmTime && !ringing && now >= alarmTime) {
+                startAlarm();
+            }
+        }
+
+        setInterval(updateClock, 200);
+        updateClock();
+
+        function setAlarm() {
+            if (!alarmInput.value) {
+                status.textContent = "Please select an alarm time.";
+                return;
+            }
+
+            stopSound();
+
+            const parts = alarmInput.value.split(":");
+            const now = new Date();
+
+            const target = new Date(now);
+            target.setHours(
+                Number(parts[0]),
+                Number(parts[1]),
+                Number(parts[2] || 0),
+                0
+            );
+
+            if (target <= now) {
+                target.setDate(target.getDate() + 1);
+            }
+
+            alarmTime = target;
+            ringing = false;
+            controls.hidden = true;
+            clock.classList.remove("ringing");
+
+            status.textContent =
+                "Alarm set for " + formatTime(alarmTime) +
+                ". Waiting for alarm...";
+
+            setBtn.textContent = "Update Alarm";
+        }
+
+        function playBeep() {
+            try {
+                const AudioContextClass =
+                    window.AudioContext || window.webkitAudioContext;
+
+                if (!AudioContextClass) {
+                    status.textContent =
+                        "Alarm ringing. Audio is not supported by this browser.";
+                    return;
+                }
+
+                if (!audioContext) {
+                    audioContext = new AudioContextClass();
+                }
+
+                if (audioContext.state === "suspended") {
+                    audioContext.resume();
+                }
+
+                const oscillator = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+
+                oscillator.type = "sine";
+                oscillator.frequency.value = 880;
+                gain.gain.value = 0.3;
+
+                oscillator.connect(gain);
+                gain.connect(audioContext.destination);
+
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.35);
+            } catch (error) {
+                console.error("Unable to play alarm sound:", error);
+            }
+        }
+
+        function startAlarm() {
+            ringing = true;
+            status.textContent = "🔔 ALARM! WAKE UP!";
+            clock.classList.add("ringing");
+            controls.hidden = false;
+
+            playBeep();
+            beepTimer = setInterval(playBeep, 1000);
+        }
+
+        function stopSound() {
+            if (beepTimer !== null) {
+                clearInterval(beepTimer);
+                beepTimer = null;
+            }
+        }
+
+        function snoozeAlarm() {
+            stopSound();
+
+            alarmTime = new Date(Date.now() + 5 * 60 * 1000);
+            ringing = false;
+            controls.hidden = true;
+            clock.classList.remove("ringing");
+
+            status.textContent =
+                "⏰ Snoozed until " + formatTime(alarmTime);
+        }
+
+        function stopAlarm() {
+            stopSound();
+
+            alarmTime = null;
+            ringing = false;
+            controls.hidden = true;
+            clock.classList.remove("ringing");
+
+            status.textContent = "Alarm stopped.";
+            setBtn.textContent = "Set Alarm";
+        }
+    </script>
+</body>
+</html>
