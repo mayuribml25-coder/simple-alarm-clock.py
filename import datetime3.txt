@@ -1,0 +1,57 @@
+import time
+from datetime import datetime, timedelta
+
+print("===== ADVANCED ALARM CLOCK =====")
+
+def get_alarm_time():
+    while True:
+        alarm = input("Enter Alarm Time (HH:MM:SS): ")
+        try:
+            entered = datetime.strptime(alarm, "%H:%M:%S").time()
+            now = datetime.now()
+            target = now.replace(
+                hour=entered.hour,
+                minute=entered.minute,
+                second=entered.second,
+                microsecond=0
+            )
+
+            if target <= now:
+                target += timedelta(days=1)
+
+            return target
+
+        except ValueError:
+            print("Invalid time! Example: 18:50:00")
+
+alarm_time = get_alarm_time()
+
+print("Alarm set for:", alarm_time.strftime("%H:%M:%S"))
+print("Waiting for alarm...")
+
+while True:
+    now = datetime.now()
+    print("Current Time:", now.strftime("%H:%M:%S"), end="\r", flush=True)
+
+    if now >= alarm_time:
+        print("\n\n🔔 ALARM! WAKE UP!")
+
+        for i in range(10):
+            print("\a🔔 BEEP! BEEP!")
+            time.sleep(1)
+
+        choice = input(
+            "\nEnter R to Snooze (5 min) or S to Stop: "
+        ).strip().upper()
+
+        if choice == "R":
+            alarm_time = datetime.now() + timedelta(minutes=5)
+            print("⏰ Snoozed until:",
+                  alarm_time.strftime("%H:%M:%S"))
+            print("Waiting for alarm...")
+
+        else:
+            print("Alarm stopped.")
+            break
+
+    time.sleep(0.2)
