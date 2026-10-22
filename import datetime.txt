@@ -1,0 +1,32 @@
+import datetime
+import time
+
+alarm = input("Enter alarm time (HH:MM:SS): ")
+
+print("⏰ Alarm set for:", alarm)
+print("Waiting for alarm...")
+
+while True:
+    current = datetime.datetime.now().strftime("%H:%M:%S")
+    print("Current Time:", current, end="\r")
+
+    if current == alarm:
+        print("\n🔔 ALARM! Wake up!")
+
+        for i in range(3):
+            print("\a🔔 BEEP!")
+            time.sleep(1)
+
+        choice = input("\nEnter R for Snooze or S to Stop: ").upper()
+
+        if choice == "R":
+            alarm = (
+                datetime.datetime.now() +
+                datetime.timedelta(minutes=5)
+            ).strftime("%H:%M:%S")
+            print("⏰ Snoozed for 5 minutes:", alarm)
+        else:
+            print("Alarm stopped.")
+            break
+
+    time.sleep(1)
